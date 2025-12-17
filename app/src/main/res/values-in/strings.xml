@@ -1,0 +1,82 @@
+<resources>
+    <string name="app_name">Custom RPC</string>
+    <string name="app_subtitle">Klien Discord Rich Presence</string>
+    
+    <!-- Login View -->
+    <string name="title_login">CustomRPC</string>
+    <string name="hint_token">Token Pengguna</string>
+    <string name="btn_login_discord">Masuk via Discord</string>
+    <string name="btn_login">Masuk</string>
+    <string name="btn_token_guide">Cara Mendapatkan Token?</string>
+    <string name="msg_enter_token">Mohon masukkan token</string>
+    <string name="msg_token_saved">Token Diterima &amp; Disimpan!</string>
+    <string name="msg_sniffing">Mengambil header \'Authorization\'...</string>
+    
+    <!-- Dashboard View -->
+    <string name="status_label">STATUS</string>
+    <string name="status_offline">OFFLINE</string>
+    <string name="status_connecting">MENGHUBUNGKAN</string>
+    <string name="status_online">ONLINE</string>
+    <string name="desc_service_idle">Layanan Idle</string>
+    <string name="btn_start">MULAI</string>
+    <string name="btn_stop">BERHENTI</string>
+    <string name="btn_kill_service">Matikan Layanan</string>
+    <string name="btn_configure">Konfigurasi Presence</string>
+    
+    <!-- Settings View -->
+    <string name="title_configuration">Konfigurasi</string>
+    <string name="hint_app_id">ID Aplikasi</string>
+    <string name="hint_app_name">Nama Aktivitas (Nama App Custom)</string>
+    <string name="label_activity_type">Tipe Aktivitas</string>
+    <string name="label_user_status">Status Pengguna</string>
+    <string name="hint_details">Detail (Baris Atas)</string>
+    <string name="hint_state">Status (Baris Bawah)</string>
+    <string name="hint_party_size">Ukuran Party</string>
+    <string name="hint_party_max">Maks Party</string>
+    
+    <string name="label_timestamps">Waktu</string>
+    <string name="btn_ts_start">Mulai</string>
+    <string name="btn_ts_end">Selesai</string>
+    <string name="ts_none">Tidak Ada</string>
+    
+    <string name="label_large_image">Gambar Besar</string>
+    <string name="label_small_image">Gambar Kecil</string>
+    <string name="hint_image_key">Kunci (Key)</string>
+    <string name="hint_image_text">Tooltip</string>
+    
+    <string name="label_btn1">Tombol 1</string>
+    <string name="label_btn2">Tombol 2</string>
+    <string name="hint_btn_label">Label</string>
+    <string name="hint_btn_url">URL</string>
+    
+    <string name="btn_save_apply">Simpan &amp; Terapkan</string>
+    <string name="btn_back_dashboard">Kembali ke Dashboard</string>
+    
+    <string name="msg_rpc_updated">RPC Diperbarui!</string>
+    <string name="msg_fetching_assets">Mengambil aset...</string>
+    <string name="msg_no_app_id">Mohon isi ID Aplikasi terlebih dahulu</string>
+    <string name="msg_no_assets_found">Tidak ditemukan aset untuk App ID ini</string>
+    <string name="title_select_image">Pilih Kunci Gambar</string>
+    
+    <!-- About View -->
+    <string name="about_version">Versi 1.0 (Codename: Archangel)</string>
+    <string name="about_dev">Dikembangkan oleh Khoirul Aksara</string>
+    <string name="btn_github">GitHub Repository</string>
+    <string name="btn_email">Kontak / Email</string>
+    <string name="btn_donate">Donasi (Traktir Kopi)</string>
+    <string name="about_desc">Jaga Discord Presence Tetap Hidup.\nSimpel, Ringan, Persisten.</string>
+    <string name="btn_back">Kembali</string>
+    
+    <!-- Token Guide Dialog -->
+    <string name="dialog_guide_title">Cara Dapat Token</string>
+    <string name="dialog_guide_msg">1. Buka Discord Web/PC.\n2. Ctrl+Shift+I -> Network.\n3. Ketik \'/api/\' filter.\n4. Kirim chat.\n5. Copy header \'authorization\'.</string>
+    <string name="btn_open_login">Buka Login</string>
+    <string name="btn_close">Tutup</string>
+    
+    <!-- Service / Notifications -->
+    <string name="notif_channel_name">Channel Layanan Discord RPC</string>
+    <string name="notif_title_active">Discord RPC Aktif</string>
+    <string name="notif_desc_background">%s aktif dibelakang layar</string>
+    <string name="msg_service_started">Layanan RPC Dimulai</string>
+    <string name="msg_service_killed">Layanan mati tidak terduga! Mencoba restart...</string>
+</resources>
