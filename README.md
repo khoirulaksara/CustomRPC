@@ -2,7 +2,7 @@
 
 **CustomRPC** is a lightweight, reliable, and persistent Discord Rich Presence (RPC) client for Android. It allows you to display a custom status, "Playing" activity, or detailed presence on your Discord profile directly from your Android device.
 
-![App Icon](app/src/main/res/mipmap-xxhdpi/ic_launcher.webp)
+![App Icon](icon.png)
 
 ## 🌟 Features
 
