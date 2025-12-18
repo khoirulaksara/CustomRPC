@@ -72,6 +72,12 @@ class RpcService : Service(), GatewayStateListener {
             }
             ACTION_STOP -> {
                 isIntentionalStop = true
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                } else {
+                    @Suppress("DEPRECATION")
+                    stopForeground(true)
+                }
                 stopSelf()
             }
         }
@@ -103,8 +109,12 @@ class RpcService : Service(), GatewayStateListener {
         reconnectHandler.removeCallbacksAndMessages(null)
         clearConnectionTimeout()
 
-        // Panggil close dengan shutdownClient = true karena service akan berhenti total
-        gateway?.close(shutdownClient = true)
+        try {
+            // Panggil close dengan shutdownClient = true karena service akan berhenti total
+            gateway?.close(shutdownClient = true)
+        } catch (e: Exception) {
+            Log.e("RpcService", "Error closing gateway in onDestroy", e)
+        }
         gateway = null // Prevent usage after destruction
 
         // Release Locks
@@ -128,18 +138,23 @@ class RpcService : Service(), GatewayStateListener {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        Log.w("RpcService", "Task Removed (Swiped away). Attempting restart...")
-        val restartIntent = Intent(applicationContext, RestartReceiver::class.java)
-        val pendingIntent = android.app.PendingIntent.getBroadcast(
-            applicationContext, 1, restartIntent, android.app.PendingIntent.FLAG_ONE_SHOT or android.app.PendingIntent.FLAG_IMMUTABLE
-        )
-        val alarmManager = getSystemService(android.app.AlarmManager::class.java)
-        alarmManager?.set(android.app.AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 1000, pendingIntent)
+        // Only restart if it wasn't an intentional stop
+        if (!isIntentionalStop) {
+            Log.w("RpcService", "Task Removed (Swiped away). Attempting restart...")
+            val restartIntent = Intent(applicationContext, RestartReceiver::class.java)
+            val pendingIntent = android.app.PendingIntent.getBroadcast(
+                applicationContext, 1, restartIntent, android.app.PendingIntent.FLAG_ONE_SHOT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+            val alarmManager = getSystemService(android.app.AlarmManager::class.java)
+            alarmManager?.set(android.app.AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 1000, pendingIntent)
+        } else {
+             Log.i("RpcService", "Task Removed, but stop was intentional. No restart.")
+        }
         
         super.onTaskRemoved(rootIntent)
     }
 
-    private var isIntentionalStop = false
+    @Volatile private var isIntentionalStop = false
     private val reconnectHandler = Handler(Looper.getMainLooper())
 
     override fun onStateChange(isConnected: Boolean, message: String) {
@@ -233,17 +248,21 @@ class RpcService : Service(), GatewayStateListener {
                 button2Label = sharedPref.getString("btn2Text", "") ?: "",
                 button2Url = sharedPref.getString("btn2Url", "") ?: "",
                 timestampStart = when (sharedPref.getInt("timestampMode", 2)) {
-                    1, 2 -> { // Force Local Time (Start of Day) for both Elapsed (1) and Local (2) to prevent reset
-                        val cal = java.util.Calendar.getInstance()
-                        cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
-                        cal.set(java.util.Calendar.MINUTE, 0)
-                        cal.set(java.util.Calendar.SECOND, 0)
-                        cal.timeInMillis
+                    1 -> System.currentTimeMillis() // Elapsed Time (Start now)
+                    2 -> { // Local Time (Start of Day)
+                         val cal = java.util.Calendar.getInstance()
+                         cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
+                         cal.set(java.util.Calendar.MINUTE, 0)
+                         cal.set(java.util.Calendar.SECOND, 0)
+                         cal.timeInMillis
                     }
+                    3 -> sharedPref.getLong("customStartTime", 0L).takeIf { it != 0L } // Custom
                     else -> null
                 },
-                timestampEnd = null,
-                userStatus = sharedPref.getString("userStatus", "online") ?: "online"
+                timestampEnd = when (sharedPref.getInt("timestampMode", 2)) {
+                    3 -> sharedPref.getLong("customEndTime", 0L).takeIf { it != 0L }
+                    else -> null
+                }
             )
             Log.i("RpcService", "Restoring last presence: $presence")
             gateway?.updatePresence(presence)

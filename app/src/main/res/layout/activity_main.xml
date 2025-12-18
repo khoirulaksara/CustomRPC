@@ -259,20 +259,7 @@
                 android:backgroundTint="#B9BBBE"
                 android:layout_marginBottom="16dp"/>
 
-            <!-- USER STATUS -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/label_user_status"
-                android:textColor="#B9BBBE"
-                android:layout_marginBottom="8dp"/>
-            <Spinner
-                android:id="@+id/user_status_spinner"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:background="@android:drawable/btn_dropdown"
-                android:backgroundTint="#B9BBBE"
-                android:layout_marginBottom="16dp"/>
+
 
             <!-- DETAILS & STATE -->
             <com.google.android.material.textfield.TextInputLayout

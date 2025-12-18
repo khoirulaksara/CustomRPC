@@ -241,10 +241,11 @@ class DiscordGateway(
         val presenceUpdate = JSONObject().apply {
             put("op", 3)
             put("d", JSONObject().apply {
-                val status = presence.userStatus.takeIf { it.isNotBlank() } ?: "online"
-                val isIdle = status.equals("idle", ignoreCase = true)
+                // Default to online since we removed the selector
+                val status = "online" 
+                val isIdle = false
                 
-                put("since", if (isIdle) System.currentTimeMillis() else JSONObject.NULL)
+                put("since", JSONObject.NULL)
                 put("activities", JSONArray().put(activity))
                 put("status", status)
                 put("afk", isIdle)

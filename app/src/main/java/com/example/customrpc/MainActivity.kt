@@ -41,7 +41,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var appIdEditText: EditText
     private lateinit var appNameEditText: EditText
     private lateinit var activityTypeSpinner: Spinner
-    private lateinit var userStatusSpinner: Spinner
+
 
 
     private lateinit var detailsEditText: EditText
@@ -344,7 +344,14 @@ class MainActivity : AppCompatActivity() {
         val serviceIntent = Intent(this, RpcService::class.java).apply {
             action = RpcService.ACTION_STOP
         }
-        stopService(serviceIntent)
+        
+        // Correctly send the intent to the service so it can process ACTION_STOP
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent)
+        } else {
+            startService(serviceIntent)
+        }
+        
         updateDashboardStatus(false, getString(R.string.status_offline)) // Immediate feedback
     }
 
@@ -352,7 +359,6 @@ class MainActivity : AppCompatActivity() {
         appIdEditText = findViewById(R.id.app_id_edit_text)
         appNameEditText = findViewById(R.id.app_name_edit_text)
         activityTypeSpinner = findViewById(R.id.activity_type_spinner)
-        userStatusSpinner = findViewById(R.id.user_status_spinner)
         detailsEditText = findViewById(R.id.details_edit_text)
         stateEditText = findViewById(R.id.state_edit_text)
         partySizeEditText = findViewById(R.id.party_size_edit_text)
@@ -394,11 +400,7 @@ class MainActivity : AppCompatActivity() {
         typeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         activityTypeSpinner.adapter = typeAdapter
 
-        // Manual translation for Status Spinner (since logic depends on index/string)
-        val statusTypes = arrayOf("Online", "Idle", "Do Not Disturb", "Invisible")
-        val statusAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, statusTypes)
-        statusAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        userStatusSpinner.adapter = statusAdapter
+
 
         val tsTypes = arrayOf(getString(R.string.ts_none), "Elapsed Time", "Local Time", "Custom Range")
         val tsAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, tsTypes)
@@ -467,10 +469,7 @@ class MainActivity : AppCompatActivity() {
             button2Label = btn2Text.text.toString().trim(),
             button2Url = btn2Url.text.toString().trim(),
             timestampStart = start,
-            timestampEnd = end,
-            userStatus = when(userStatusSpinner.selectedItemPosition) {
-                0 -> "online"; 1 -> "idle"; 2 -> "dnd"; 3 -> "invisible"; else -> "online"
-            }
+            timestampEnd = end
         )
 
         val serviceIntent = Intent(this, RpcService::class.java).apply {
@@ -680,9 +679,6 @@ class MainActivity : AppCompatActivity() {
             putString("appId", appIdEditText.text.toString())
             putString("appName", appNameEditText.text.toString())
             putInt("activityType", activityTypeSpinner.selectedItemPosition)
-            putString("userStatus", when(userStatusSpinner.selectedItemPosition) {
-                0 -> "online"; 1 -> "idle"; 2 -> "dnd"; 3 -> "invisible"; else -> "online"
-            })
             putString("details", detailsEditText.text.toString())
             putString("state", stateEditText.text.toString())
             putString("partySize", partySizeEditText.text.toString())
@@ -698,6 +694,8 @@ class MainActivity : AppCompatActivity() {
             putString("btn2Text", btn2Text.text.toString())
             putString("btn2Url", btn2Url.text.toString())
             putInt("timestampMode", timestampSpinner.selectedItemPosition)
+            putLong("customStartTime", customStartTime ?: 0L)
+            putLong("customEndTime", customEndTime ?: 0L)
             apply()
         }
     }
@@ -711,14 +709,6 @@ class MainActivity : AppCompatActivity() {
         appNameEditText.setText(sharedPref.getString("appName", ""))
 
         activityTypeSpinner.setSelection(sharedPref.getInt("activityType", 0))
-
-        val statusIdx = when(sharedPref.getString("userStatus", "online")) {
-            "idle" -> 1
-            "dnd" -> 2
-            "invisible" -> 3
-            else -> 0
-        }
-        userStatusSpinner.setSelection(statusIdx)
 
         detailsEditText.setText(sharedPref.getString("details", ""))
         stateEditText.setText(sharedPref.getString("state", ""))
@@ -735,6 +725,12 @@ class MainActivity : AppCompatActivity() {
         btn2Text.setText(sharedPref.getString("btn2Text", ""))
         btn2Url.setText(sharedPref.getString("btn2Url", ""))
         timestampSpinner.setSelection(sharedPref.getInt("timestampMode", 2))
+        
+        customStartTime = sharedPref.getLong("customStartTime", 0L).takeIf { it != 0L }
+        customEndTime = sharedPref.getLong("customEndTime", 0L).takeIf { it != 0L }
+        
+        if (customStartTime != null) tvStartTimeVal.text = Date(customStartTime!!).toString()
+        if (customEndTime != null) tvEndTimeVal.text = Date(customEndTime!!).toString()
     }
 
     private fun pickDateTime(onPicked: (Long) -> Unit) {

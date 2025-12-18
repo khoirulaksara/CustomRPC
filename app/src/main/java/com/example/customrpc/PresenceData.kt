@@ -21,6 +21,5 @@ data class PresenceData(
     val timestampStart: Long?,
     val timestampEnd: Long?,
     val partyId: String? = null,
-    val joinSecret: String? = null,
-    val userStatus: String = "online"
+    val joinSecret: String? = null
 ) : Serializable
