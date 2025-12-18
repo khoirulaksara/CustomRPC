@@ -98,14 +98,20 @@ class RpcService : Service(), GatewayStateListener {
 
     override fun onDestroy() {
         Log.w("RpcService", "onDestroy called. Service is being stopped.")
+        
+        // Stop any pending reconnects immediately
+        reconnectHandler.removeCallbacksAndMessages(null)
+        clearConnectionTimeout()
+
         // Panggil close dengan shutdownClient = true karena service akan berhenti total
         gateway?.close(shutdownClient = true)
+        gateway = null // Prevent usage after destruction
+
         // Release Locks
         if (wakeLock?.isHeld == true) wakeLock?.release()
         if (wifiLock?.isHeld == true) wifiLock?.release()
         
         super.onDestroy()
-        clearConnectionTimeout()
         // Broadcast final disconnected state
         onStateChange(false, "Disconnected")
         

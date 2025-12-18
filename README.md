@@ -21,6 +21,15 @@
     *   🇮🇩 **Indonesian** (Bahasa Indonesia) - *Automatically detected based on system language.*
 *   **Token Sniffer**: Built-in web login helper to easily retrieve your Discord Auth Token.
 
+## 📸 Screenshots
+
+<p align="center">
+  <img src="image/Screenshot_20251218_070912.jpg" width="200" />
+  <img src="image/Screenshot_20251218_070957.jpg" width="200" />
+  <img src="image/Screenshot_20251218_071559.jpg" width="200" />
+  <img src="image/Screenshot%202025-12-18%20071014.png" width="200" />
+</p>
+
 ## ⚠️ Disclaimer
 
 **Use at your own risk.**
