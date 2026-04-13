@@ -41,7 +41,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var appIdEditText: EditText
     private lateinit var appNameEditText: EditText
     private lateinit var activityTypeSpinner: Spinner
-
+    private lateinit var statusSpinner: Spinner
 
 
     private lateinit var detailsEditText: EditText
@@ -115,11 +115,19 @@ class MainActivity : AppCompatActivity() {
         com.google.android.material.color.DynamicColors.applyToActivitiesIfAvailable(this.application)
 
         // Request Ignore Battery Optimization
+        val sharedPref = getSharedPreferences("RpcSettings", Context.MODE_PRIVATE)
+        val hasAskedBattery = sharedPref.getBoolean("hasAskedBattery", false)
         val pm = getSystemService(android.os.PowerManager::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !pm.isIgnoringBatteryOptimizations(packageName)) {
-            val intent = Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-            intent.data = Uri.parse("package:$packageName")
-            startActivity(intent)
+        
+        if (!hasAskedBattery && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !pm.isIgnoringBatteryOptimizations(packageName)) {
+            sharedPref.edit().putBoolean("hasAskedBattery", true).apply()
+            try {
+                val intent = Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                intent.data = Uri.parse("package:$packageName")
+                startActivity(intent)
+            } catch (e: Exception) {
+                // Ignore if device doesn't support this intent
+            }
         }
         setContentView(R.layout.activity_main)
 
@@ -300,7 +308,15 @@ class MainActivity : AppCompatActivity() {
                 // Currently Online -> Disconnect (Stop Service, keep app open)
                 sendDisconnectIntent()
             } else {
-                 val token = loginTokenInput.text.toString()
+                val token = loginTokenInput.text.toString()
+                val appId = appIdEditText.text.toString()
+                
+                if (appId.isBlank()) {
+                    Toast.makeText(this, getString(R.string.msg_no_app_id), Toast.LENGTH_SHORT).show()
+                    showSettings()
+                    return@setOnClickListener
+                }
+                
                 if(token.isNotBlank()) {
                     updateDashboardStatus(false, getString(R.string.status_connecting))
                     val serviceIntent = Intent(this, RpcService::class.java).apply {
@@ -359,6 +375,7 @@ class MainActivity : AppCompatActivity() {
         appIdEditText = findViewById(R.id.app_id_edit_text)
         appNameEditText = findViewById(R.id.app_name_edit_text)
         activityTypeSpinner = findViewById(R.id.activity_type_spinner)
+        statusSpinner = findViewById(R.id.status_spinner)
         detailsEditText = findViewById(R.id.details_edit_text)
         stateEditText = findViewById(R.id.state_edit_text)
         partySizeEditText = findViewById(R.id.party_size_edit_text)
@@ -400,6 +417,10 @@ class MainActivity : AppCompatActivity() {
         typeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         activityTypeSpinner.adapter = typeAdapter
 
+        val statusOptions = arrayOf("Online", "Idle", "Do Not Disturb", "Invisible")
+        val statusAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, statusOptions)
+        statusAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        statusSpinner.adapter = statusAdapter
 
 
         val tsTypes = arrayOf(getString(R.string.ts_none), "Elapsed Time", "Local Time", "Custom Range")
@@ -436,6 +457,13 @@ class MainActivity : AppCompatActivity() {
         val typeInt = when(activityTypeSpinner.selectedItemPosition) {
             0 -> 0; 1 -> 1; 2 -> 2; 3 -> 3; 4 -> 4; 5 -> 5; else -> 0
         }
+        val userStatusStr = when(statusSpinner.selectedItemPosition) {
+            0 -> "online"
+            1 -> "idle"
+            2 -> "dnd"
+            3 -> "invisible"
+            else -> "online"
+        }
         
         var start: Long? = null
         var end: Long? = null
@@ -469,7 +497,8 @@ class MainActivity : AppCompatActivity() {
             button2Label = btn2Text.text.toString().trim(),
             button2Url = btn2Url.text.toString().trim(),
             timestampStart = start,
-            timestampEnd = end
+            timestampEnd = end,
+            userStatus = userStatusStr
         )
 
         val serviceIntent = Intent(this, RpcService::class.java).apply {
@@ -679,6 +708,7 @@ class MainActivity : AppCompatActivity() {
             putString("appId", appIdEditText.text.toString())
             putString("appName", appNameEditText.text.toString())
             putInt("activityType", activityTypeSpinner.selectedItemPosition)
+            putInt("userStatus", statusSpinner.selectedItemPosition)
             putString("details", detailsEditText.text.toString())
             putString("state", stateEditText.text.toString())
             putString("partySize", partySizeEditText.text.toString())
@@ -709,6 +739,12 @@ class MainActivity : AppCompatActivity() {
         appNameEditText.setText(sharedPref.getString("appName", ""))
 
         activityTypeSpinner.setSelection(sharedPref.getInt("activityType", 0))
+        val statusSelection = try {
+            sharedPref.getInt("userStatus", 0)
+        } catch (e: ClassCastException) {
+            0
+        }
+        statusSpinner.setSelection(statusSelection)
 
         detailsEditText.setText(sharedPref.getString("details", ""))
         stateEditText.setText(sharedPref.getString("state", ""))

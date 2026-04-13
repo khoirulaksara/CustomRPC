@@ -19,6 +19,7 @@ class DiscordGateway(
     private var heartbeatInterval: Long = 41250
     @Volatile private var isConnected = false
     private var sequence: Int? = null
+    private var heartbeatAckReceived = true
 
     // Discord Gateway Intents
     // Kita tidak perlu menerima pesan atau presence orang lain, cukup kirim presence kita sendiri.
@@ -37,12 +38,19 @@ class DiscordGateway(
     }
 
     override fun onOpen(webSocket: WebSocket, response: Response) {
+        if (this.webSocket != null && this.webSocket != webSocket) {
+            webSocket.close(1000, "Stale connection")
+            webSocket.cancel()
+            return
+        }
         isConnected = true
         Log.i("DiscordGateway", "WebSocket connection opened.")
         listener.onStateChange(true, "WebSocket Open. Waiting for HELLO...")
     }
 
     override fun onMessage(webSocket: WebSocket, text: String) {
+        if (this.webSocket != null && this.webSocket != webSocket) return
+        
         // Log.d("DiscordGateway", "Received: $text") // Disabled to save logcat space
         try {
             val json = JSONObject(text)
@@ -95,6 +103,7 @@ class DiscordGateway(
                     close(4004, "Invalid session")
                 }
                 11 -> {
+                    heartbeatAckReceived = true
                     val latency = System.currentTimeMillis() - lastHeartbeatTime
                     Log.d("DiscordGateway", "Heartbeat ACK received. Ping: ${latency}ms")
                     listener.onStateChange(true, "Connected • ${latency}ms")
@@ -111,15 +120,26 @@ class DiscordGateway(
     }
 
     private fun startHeartbeat() {
+        heartbeatAckReceived = true
         Thread {
             while (isConnected) {
                 try {
                     Thread.sleep(heartbeatInterval)
+                    if (!heartbeatAckReceived) {
+                        Log.e("DiscordGateway", "Heartbeat ACK not received. Connection dead.")
+                        val reason = "Heartbeat Timeout"
+                        close(1008, reason)
+                        listener.onStateChange(false, reason)
+                        break
+                    }
+                    heartbeatAckReceived = false
                     sendHeartbeat()
                 } catch (e: InterruptedException) {
                     Thread.currentThread().interrupt()
                     Log.e("DiscordGateway", "Heartbeat thread interrupted.", e)
-                    listener.onStateChange(false, "Heartbeat stopped.")
+                    if (isConnected) {
+                        listener.onStateChange(false, "Heartbeat stopped.")
+                    }
                 }
             }
         }.start()
@@ -241,9 +261,8 @@ class DiscordGateway(
         val presenceUpdate = JSONObject().apply {
             put("op", 3)
             put("d", JSONObject().apply {
-                // Default to online since we removed the selector
-                val status = "online" 
-                val isIdle = false
+                val status = presence.userStatus.ifBlank { "online" }
+                val isIdle = status == "idle"
                 
                 put("since", JSONObject.NULL)
                 put("activities", JSONArray().put(activity))
@@ -256,6 +275,7 @@ class DiscordGateway(
     }
 
     override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+        if (this.webSocket != null && this.webSocket != webSocket) return
         isConnected = false
         Log.i("DiscordGateway", "WebSocket is closing. Code: $code, Reason: $reason")
         listener.onStateChange(false, "Disconnected: $reason (Code: $code)")
@@ -263,6 +283,10 @@ class DiscordGateway(
     }
 
     override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+        if (this.webSocket != null && this.webSocket != webSocket) {
+             Log.d("DiscordGateway", "Ignored failure from a closed/old websocket.")
+             return
+        }
         isConnected = false
         Log.e("DiscordGateway", "Connection Failed!", t)
         val message = "Connection Failed: ${t.message ?: "Unknown error"}"
@@ -270,14 +294,17 @@ class DiscordGateway(
         this.webSocket = null // Clear webSocket reference
     }
 
-    // Method to close the connection and optionally shut down the client's executor
     fun close(code: Int = 1000, reason: String = "User Closed", shutdownClient: Boolean = false) {
-        if (webSocket != null) {
-            webSocket?.close(code, reason)
-        }
-        isConnected = false
-        Log.i("DiscordGateway", "Gateway closed. Reason: $reason")
+        val oldSocket = webSocket
         this.webSocket = null
+        isConnected = false
+        
+        if (oldSocket != null) {
+            oldSocket.close(code, reason)
+            oldSocket.cancel() // Cancel any pending/inflight requests on the OkHttp socket
+        }
+        
+        Log.i("DiscordGateway", "Gateway closed. Reason: $reason")
         if (shutdownClient) {
             client.dispatcher.executorService.shutdown()
         }

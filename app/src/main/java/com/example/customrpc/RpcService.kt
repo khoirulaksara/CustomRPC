@@ -48,6 +48,9 @@ class RpcService : Service(), GatewayStateListener {
                 val token = intent.getStringExtra("TOKEN") ?: return START_NOT_STICKY
                 val appName = intent.getStringExtra("APP_NAME") ?: "Custom RPC"
                 
+                // Hapus pending reconnects
+                reconnectHandler.removeCallbacksAndMessages(null)
+
                 // Hentikan koneksi lama jika ada
                 gateway?.close()
 
@@ -85,6 +88,7 @@ class RpcService : Service(), GatewayStateListener {
     }
 
     private fun startConnectionTimeout() {
+        clearConnectionTimeout()
         Log.d("RpcService", "Starting connection timeout timer for ${CONNECTION_TIMEOUT}ms.")
         connectionTimeoutRunnable = Runnable {
             Log.w("RpcService", "Connection timeout triggered! Gateway did not respond in time.")
@@ -179,6 +183,7 @@ class RpcService : Service(), GatewayStateListener {
                  Log.w("RpcService", "Connection dropped unexpectedly ($message). Reconnecting in 5 seconds...")
                  reconnectHandler.postDelayed({
                      Log.i("RpcService", "Auto-Reconnecting now...")
+                     startConnectionTimeout()
                      gateway?.connect()
                  }, 5000)
             }
@@ -247,6 +252,13 @@ class RpcService : Service(), GatewayStateListener {
                 button1Url = sharedPref.getString("btn1Url", "") ?: "",
                 button2Label = sharedPref.getString("btn2Text", "") ?: "",
                 button2Url = sharedPref.getString("btn2Url", "") ?: "",
+                userStatus = when (try { sharedPref.getInt("userStatus", 0) } catch (e: Exception) { 0 }) {
+                    0 -> "online"
+                    1 -> "idle"
+                    2 -> "dnd"
+                    3 -> "invisible"
+                    else -> "online"
+                },
                 timestampStart = when (sharedPref.getInt("timestampMode", 2)) {
                     1 -> System.currentTimeMillis() // Elapsed Time (Start now)
                     2 -> { // Local Time (Start of Day)
