@@ -13,6 +13,7 @@
     <string name="msg_sniffing">Sniffing \'Authorization\' header...</string>
     
     <!-- Dashboard View -->
+    <string name="title_dashboard">Dashboard</string>
     <string name="status_label">STATUS</string>
     <string name="status_offline">OFFLINE</string>
     <string name="status_connecting">CONNECTING</string>
@@ -22,6 +23,16 @@
     <string name="btn_stop">STOP</string>
     <string name="btn_kill_service">Kill Service</string>
     <string name="btn_configure">Configure Presence</string>
+    <string name="label_active_preview">Active Presence Preview</string>
+    <string name="btn_start_connection">START CONNECTION</string>
+    <string name="btn_stop_connection">STOP CONNECTION</string>
+    <string name="btn_logout">Logout</string>
+    <string name="desc_battery_opt">Battery Optimization Active</string>
+    <string name="desc_battery_opt_fix">Click to fix (Recommended for 24/7 stability)</string>
+    <string name="msg_disable_opt_manually">Please disable optimization in settings manually</string>
+    <string name="status_no_internet">NO INTERNET</string>
+    <string name="msg_no_internet_warning">No internet connection detected. Presence will not update.</string>
+    <string name="msg_action_requires_internet">This action requires an internet connection.</string>
     
     <!-- Settings View -->
     <string name="title_configuration">Configuration</string>
@@ -49,8 +60,16 @@
     <string name="hint_btn_label">Label</string>
     <string name="hint_btn_url">URL</string>
     
-    <string name="btn_save_apply">Save &amp; Apply Details</string>
+    <string name="btn_save_apply">Save &amp; Apply</string>
     <string name="btn_back_dashboard">Back to Dashboard</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="label_recent_app_ids">Recent App IDs</string>
+    <string name="label_live_preview">Live Preview</string>
+    <string name="msg_app_id_token_missing">App ID or Token is missing</string>
+    <string name="msg_network_error">Network Error</string>
+    <string name="msg_no_assets">No assets found</string>
+    <string name="msg_failed_api">Failed API or no assets</string>
+    <string name="title_select_asset">Select Asset</string>
     
     <string name="msg_rpc_updated">RPC Updated!</string>
     <string name="msg_fetching_assets">Fetching assets...</string>
@@ -59,24 +78,25 @@
     <string name="title_select_image">Select Image Key</string>
     
     <!-- About View -->
-    <string name="about_version">Version 1.0 (Codename: Archangel)</string>
-    <string name="about_dev">Developed by Khoirul Aksara</string>
-    <string name="btn_github">GitHub Repository</string>
-    <string name="btn_email">Contact / Email</string>
-    <string name="btn_donate">Donate (Traktir Kopi)</string>
+    <string name="about_version">Version %s</string>
+    <string name="about_dev">Developed by %s</string>
+    <string name="label_tagline1">Keep your Discord presence alive.</string>
+    <string name="label_tagline2">Simple, lightweight, persistent.</string>
+    <string name="btn_visit_repo">Visit Repository</string>
+    <string name="btn_support_dev">Support Developer (PayPal)</string>
     <string name="about_desc">Keep your Discord Presence Alive.\nSimple, Lightweight, Persistent.</string>
-    <string name="btn_back">Kembali</string>
+    <string name="btn_back">Back</string>
     
     <!-- Token Guide Dialog -->
-    <string name="dialog_guide_title">Cara Dapat Token</string>
-    <string name="dialog_guide_msg">1. Buka Discord Web/PC.\n2. Ctrl+Shift+I -> Network.\n3. Ketik \'/api/\' filter.\n4. Kirim chat.\n5. Copy \'authorization\' header.</string>
-    <string name="btn_open_login">Buka Login</string>
-    <string name="btn_close">Tutup</string>
+    <string name="dialog_guide_title">How to Get Token</string>
+    <string name="dialog_guide_msg">1. Open Discord Web/PC.\n2. Ctrl+Shift+I -> Network.\n3. Type \'/api/\' in filter.\n4. Send a chat message.\n5. Copy the \'authorization\' header value.</string>
+    <string name="btn_open_login">Open Login</string>
+    <string name="btn_close">Close</string>
     
     <!-- Service / Notifications -->
     <string name="notif_channel_name">Discord RPC Service Channel</string>
-    <string name="notif_title_active">Discord RPC Active</string>
-    <string name="notif_desc_background">%s aktif dibelakang layar</string>
+    <string name="notif_title_active">Presence Active</string>
+    <string name="notif_desc_background">%s is running in background</string>
     <string name="msg_service_started">RPC Service Started</string>
     <string name="msg_service_killed">Service killed unexpectedly! Attempting restart...</string>
 </resources>

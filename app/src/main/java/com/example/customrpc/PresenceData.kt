@@ -20,6 +20,7 @@ data class PresenceData(
     val button2Url: String,
     val timestampStart: Long?,
     val timestampEnd: Long?,
+    val streamingUrl: String? = null,
     val partyId: String? = null,
     val joinSecret: String? = null,
     val userStatus: String = "online"

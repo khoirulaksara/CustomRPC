@@ -15,6 +15,7 @@ class RpcService : Service(), GatewayStateListener {
     private var gateway: DiscordGateway? = null
     private val connectionTimeoutHandler = Handler(Looper.getMainLooper())
     private var connectionTimeoutRunnable: Runnable? = null
+    private var reconnectAttempts = 0
 
     companion object {
         const val ACTION_START = "ACTION_START"
@@ -28,6 +29,16 @@ class RpcService : Service(), GatewayStateListener {
     // Cache state to reply to probes
     private var lastIsConnected = false
     private var lastMessage = "Disconnected"
+
+    override fun onCreate() {
+        super.onCreate()
+        Log.d("RpcService", "onCreate called. Initializing foreground service...")
+        
+        // Always call startForeground in onCreate to prevent ForegroundServiceDidNotStartInTimeException
+        val sharedPref = getSharedPreferences("RpcSettings", android.content.Context.MODE_PRIVATE)
+        val appName = sharedPref.getString("appName", "Custom RPC") ?: "Custom RPC"
+        startPersistentNotification(appName)
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d("RpcService", "onStartCommand called with action: ${intent?.action}")
@@ -45,21 +56,40 @@ class RpcService : Service(), GatewayStateListener {
             }
             ACTION_START -> {
                 isIntentionalStop = false // Reset intentional stop flag
-                val token = intent.getStringExtra("TOKEN") ?: return START_NOT_STICKY
-                val appName = intent.getStringExtra("APP_NAME") ?: "Custom RPC"
+                val sharedPref = getSharedPreferences("RpcSettings", android.content.Context.MODE_PRIVATE)
+                val token = intent?.getStringExtra("TOKEN") ?: sharedPref.getString("token", "") ?: ""
+                val appName = intent?.getStringExtra("APP_NAME") ?: sharedPref.getString("appName", "Custom RPC") ?: "Custom RPC"
                 
+                if (token.isBlank()) {
+                    Log.e("RpcService", "Cannot start: Token is empty")
+                    return START_NOT_STICKY
+                }
+
                 // Hapus pending reconnects
                 reconnectHandler.removeCallbacksAndMessages(null)
 
                 // Hentikan koneksi lama jika ada
                 gateway?.close()
 
-                startPersistentNotification(appName)
-                gateway = DiscordGateway(token, this)
+                // startPersistentNotification(appName) // Move to onCreate
+                val statusStr = when (sharedPref.getInt("userStatus", 0)) {
+                    1 -> "idle"
+                    2 -> "dnd"
+                    3 -> "invisible"
+                    else -> "online"
+                }
+                gateway = DiscordGateway(token, statusStr, this)
                 gateway?.connect()
                 
+                // Update notification with the specific app name from intent if available
+                updateNotification(appName)
+                
+                resetReconnection()
                 // Mulai timer timeout
                 startConnectionTimeout()
+
+                // Save active state
+                sharedPref.edit().putBoolean("serviceActive", true).apply()
             }
             ACTION_UPDATE_PRESENCE -> {
                 val presenceData = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -75,16 +105,48 @@ class RpcService : Service(), GatewayStateListener {
             }
             ACTION_STOP -> {
                 isIntentionalStop = true
+                Log.i("RpcService", "ACTION_STOP received. Closing connection and stopping service.")
+                
+                // Explicitly close gateway and clear reconnects
+                gateway?.close(shutdownClient = true)
+                gateway = null
+                resetReconnection()
+                clearConnectionTimeout()
+
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                     stopForeground(STOP_FOREGROUND_REMOVE)
                 } else {
                     @Suppress("DEPRECATION")
                     stopForeground(true)
                 }
+                
+                // Save inactive state
+                val sharedPref = getSharedPreferences("RpcSettings", android.content.Context.MODE_PRIVATE)
+                sharedPref.edit().putBoolean("serviceActive", false).apply()
+                
+                broadcastStatus(false, "Disconnected")
                 stopSelf()
             }
         }
-        return START_STICKY
+        val sharedPref = getSharedPreferences("RpcSettings", android.content.Context.MODE_PRIVATE)
+        val wasActive = sharedPref.getBoolean("serviceActive", false)
+        return if (isIntentionalStop || !wasActive) START_NOT_STICKY else START_STICKY
+    }
+
+    private fun broadcastStatus(isConnected: Boolean, message: String) {
+        lastIsConnected = isConnected
+        lastMessage = message
+        
+        val intent = Intent(ACTION_STATUS_UPDATE).apply {
+            putExtra("IS_CONNECTED", isConnected)
+            putExtra("MESSAGE", message)
+            setPackage(packageName)
+        }
+        sendBroadcast(intent)
+        
+        if (isConnected && message.contains("ms")) {
+            updateNotification(message)
+        }
     }
 
     private fun startConnectionTimeout() {
@@ -108,18 +170,18 @@ class RpcService : Service(), GatewayStateListener {
 
     override fun onDestroy() {
         Log.w("RpcService", "onDestroy called. Service is being stopped.")
+        isIntentionalStop = true // Set this first to prevent any re-entry or reconnects
         
         // Stop any pending reconnects immediately
         reconnectHandler.removeCallbacksAndMessages(null)
         clearConnectionTimeout()
 
         try {
-            // Panggil close dengan shutdownClient = true karena service akan berhenti total
             gateway?.close(shutdownClient = true)
         } catch (e: Exception) {
             Log.e("RpcService", "Error closing gateway in onDestroy", e)
         }
-        gateway = null // Prevent usage after destruction
+        gateway = null 
 
         // Release Locks
         if (wakeLock?.isHeld == true) wakeLock?.release()
@@ -127,18 +189,7 @@ class RpcService : Service(), GatewayStateListener {
         
         super.onDestroy()
         // Broadcast final disconnected state
-        onStateChange(false, "Disconnected")
-        
-        // Auto-Restart if NOT intentional stop (e.g. System Kill / Swipe Notification)
-        if (!isIntentionalStop) {
-            Log.w("RpcService", getString(R.string.msg_service_killed))
-            val restartIntent = Intent(applicationContext, RestartReceiver::class.java)
-            val pendingIntent = android.app.PendingIntent.getBroadcast(
-                applicationContext, 1, restartIntent, android.app.PendingIntent.FLAG_ONE_SHOT or android.app.PendingIntent.FLAG_IMMUTABLE
-            )
-            val alarmManager = getSystemService(android.app.AlarmManager::class.java)
-            alarmManager?.set(android.app.AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 1000, pendingIntent)
-        }
+        broadcastStatus(false, "Disconnected")
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
@@ -162,44 +213,46 @@ class RpcService : Service(), GatewayStateListener {
     private val reconnectHandler = Handler(Looper.getMainLooper())
 
     override fun onStateChange(isConnected: Boolean, message: String) {
-        lastIsConnected = isConnected
-        lastMessage = message
         Log.d("RpcService", "Gateway state changed: isConnected=$isConnected, message=$message")
-        // Jika kita mendapat status berhasil, batalkan timeout dan reconnect
+        
+        val isAuthFailed = message.contains("4004") || message.contains("Invalid Session", ignoreCase = true)
+
         if (isConnected) {
             clearConnectionTimeout()
-            reconnectHandler.removeCallbacksAndMessages(null)
+            resetReconnection()
             
-            // Auto-Restore Presence on Connect (Only when fully READY)
             if (message.contains("Ready", ignoreCase = true)) {
                 restoreLastPresence()
             }
         } else {
-            // Jika putus koneksi dan BUKAN user yang stop, coba reconnect
-            // Kita reconnect untuk semua error KECUALI Authentication Failed (Code 4004)
-            val isAuthFailed = message.contains("4004") || message.contains("Invalid Session", ignoreCase = true)
-            
-            if (!isIntentionalStop && !isConnected && !isAuthFailed) {
-                 Log.w("RpcService", "Connection dropped unexpectedly ($message). Reconnecting in 5 seconds...")
-                 reconnectHandler.postDelayed({
-                     Log.i("RpcService", "Auto-Reconnecting now...")
-                     startConnectionTimeout()
-                     gateway?.connect()
-                 }, 5000)
+            if (!isIntentionalStop && !isAuthFailed) {
+                 attemptReconnect()
             }
         }
 
-        val intent = Intent(ACTION_STATUS_UPDATE).apply {
-            putExtra("IS_CONNECTED", isConnected)
-            putExtra("MESSAGE", message)
-            setPackage(packageName) // Explicitly set package to ensure delivery
-        }
-        sendBroadcast(intent)
+        broadcastStatus(isConnected, message)
+    }
+
+    private fun resetReconnection() {
+        reconnectAttempts = 0
+        reconnectHandler.removeCallbacksAndMessages(null)
+    }
+
+    private fun attemptReconnect() {
+        if (isIntentionalStop) return
         
-        // Update Notification if it's a Ping update
-        if (isConnected && message.contains("ms")) {
-            updateNotification(message)
-        }
+        reconnectAttempts++
+        val delay = (5 * java.lang.Math.pow(2.0, (reconnectAttempts - 1).coerceAtMost(4).toDouble()) * 1000).toLong()
+        val secondsLeft = delay / 1000
+        
+        Log.w("RpcService", "Reconnecting attempt #$reconnectAttempts in ${secondsLeft}s...")
+        broadcastStatus(false, "Reconnecting in ${secondsLeft}s...")
+        
+        reconnectHandler.postDelayed({
+            Log.i("RpcService", "Auto-Reconnecting now...")
+            startConnectionTimeout()
+            gateway?.connect()
+        }, delay)
     }
 
     private fun updateNotification(text: String) {
@@ -208,6 +261,10 @@ class RpcService : Service(), GatewayStateListener {
         val pendingIntent = android.app.PendingIntent.getActivity(
             this, 0, notificationIntent, android.app.PendingIntent.FLAG_IMMUTABLE
         )
+
+        // Actions
+        val stopIntent = Intent(this, RpcService::class.java).apply { action = ACTION_STOP }
+        val stopPendingIntent = android.app.PendingIntent.getService(this, 2, stopIntent, android.app.PendingIntent.FLAG_IMMUTABLE)
 
         // Ambil nama app dari prefs untuk konsistensi
         val sharedPref = getSharedPreferences("RpcSettings", android.content.Context.MODE_PRIVATE)
@@ -224,6 +281,7 @@ class RpcService : Service(), GatewayStateListener {
             .setOnlyAlertOnce(true) // PENTING: Jangan bunyi/getar saat update
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .addAction(R.drawable.ic_stop, "STOP", stopPendingIntent)
             .build()
             
         val notificationManager = getSystemService(android.app.NotificationManager::class.java)
@@ -238,7 +296,7 @@ class RpcService : Service(), GatewayStateListener {
         try {
              val presence = PresenceData(
                 appId = appId,
-                name = sharedPref.getString("appName", "Custom App") ?: "Custom App",
+                name = sharedPref.getString("appName", "Custom RPC") ?: "Custom RPC",
                 details = sharedPref.getString("details", "") ?: "",
                 state = sharedPref.getString("state", "") ?: "",
                 largeImageKey = sharedPref.getString("largeImageKey", "") ?: "",
@@ -252,6 +310,7 @@ class RpcService : Service(), GatewayStateListener {
                 button1Url = sharedPref.getString("btn1Url", "") ?: "",
                 button2Label = sharedPref.getString("btn2Text", "") ?: "",
                 button2Url = sharedPref.getString("btn2Url", "") ?: "",
+                streamingUrl = sharedPref.getString("streamingUrl", "") ?: "",
                 userStatus = when (try { sharedPref.getInt("userStatus", 0) } catch (e: Exception) { 0 }) {
                     0 -> "online"
                     1 -> "idle"
@@ -286,7 +345,9 @@ class RpcService : Service(), GatewayStateListener {
     private var wakeLock: android.os.PowerManager.WakeLock? = null
     private var wifiLock: android.net.wifi.WifiManager.WifiLock? = null
 
-    private fun startPersistentNotification(appName: String) {
+    private fun startPersistentNotification(appName: String?) {
+        val finalAppName = appName ?: getSharedPreferences("RpcSettings", android.content.Context.MODE_PRIVATE).getString("appName", "Custom RPC") ?: "Custom RPC"
+
         // Acquire WakeLock (Only if not already held)
         if (wakeLock == null) {
             val powerManager = getSystemService(android.os.PowerManager::class.java)
@@ -318,16 +379,25 @@ class RpcService : Service(), GatewayStateListener {
             this, 0, notificationIntent, android.app.PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(this, "RPC_CHANNEL_V5") // Bump ID again
+        // Actions
+        val stopIntent = Intent(this, RpcService::class.java).apply { action = ACTION_STOP }
+        val stopPendingIntent = android.app.PendingIntent.getService(this, 2, stopIntent, android.app.PendingIntent.FLAG_IMMUTABLE)
+
+        val startIntent = Intent(this, RpcService::class.java).apply { action = ACTION_START }
+        val startPendingIntent = android.app.PendingIntent.getService(this, 3, startIntent, android.app.PendingIntent.FLAG_IMMUTABLE)
+
+        val notification = NotificationCompat.Builder(this, "RPC_CHANNEL_V5")
             .setContentTitle(getString(R.string.notif_title_active))
-            .setContentText(getString(R.string.notif_desc_background, appName))
-            .setSmallIcon(R.drawable.ic_app_logo_new) // Small icon must be white/transparent
-            .setLargeIcon(largeIconBitmap) // Large icon can be colored
-            .setContentIntent(pendingIntent) // Open App on Click
+            .setContentText(getString(R.string.notif_desc_background, finalAppName))
+            .setSmallIcon(R.drawable.ic_app_logo_new)
+            .setLargeIcon(largeIconBitmap)
+            .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setAutoCancel(false)
-            .setPriority(NotificationCompat.PRIORITY_MAX) // For pre-O
+            .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .addAction(R.drawable.ic_play, "START", startPendingIntent)
+            .addAction(R.drawable.ic_stop, "STOP", stopPendingIntent)
             .build()
         startForeground(1, notification)
     }

@@ -12,6 +12,7 @@ interface GatewayStateListener {
 
 class DiscordGateway(
     private val token: String,
+    private var currentStatus: String = "online",
     private val listener: GatewayStateListener
 ) : WebSocketListener() {
     private val client = OkHttpClient.Builder().readTimeout(0, TimeUnit.MILLISECONDS).build()
@@ -168,7 +169,15 @@ class DiscordGateway(
                     put("\$browser", "Discord Client")
                     put("\$device", "desktop")
                 })
-                put("intents", intents) // Menambahkan intents di sini
+                put("intents", intents) 
+                
+                // Set initial presence during identification
+                put("presence", JSONObject().apply {
+                    put("status", currentStatus)
+                    put("since", if (currentStatus == "idle") System.currentTimeMillis() else JSONObject.NULL)
+                    put("activities", JSONArray())
+                    put("afk", currentStatus == "idle")
+                })
             })
         }
         Log.d("DiscordGateway", "Sending Identify payload with intents: $intents.")
@@ -186,6 +195,9 @@ class DiscordGateway(
             put("type", presence.activityType)
             
             if (presence.appId.isNotBlank()) put("application_id", presence.appId)
+            if (presence.activityType == 1 && !presence.streamingUrl.isNullOrBlank()) {
+                put("url", presence.streamingUrl)
+            }
 
             if (presence.details.isNotBlank()) put("details", presence.details)
             if (presence.state.isNotBlank()) put("state", presence.state)
@@ -262,9 +274,10 @@ class DiscordGateway(
             put("op", 3)
             put("d", JSONObject().apply {
                 val status = presence.userStatus.ifBlank { "online" }
-                val isIdle = status == "idle"
+                currentStatus = status // Store for future re-identifies
                 
-                put("since", JSONObject.NULL)
+                val isIdle = status == "idle"
+                put("since", if (isIdle) System.currentTimeMillis() else JSONObject.NULL)
                 put("activities", JSONArray().put(activity))
                 put("status", status)
                 put("afk", isIdle)
@@ -289,7 +302,12 @@ class DiscordGateway(
         }
         isConnected = false
         Log.e("DiscordGateway", "Connection Failed!", t)
-        val message = "Connection Failed: ${t.message ?: "Unknown error"}"
+        val errMsg = t.message ?: "Unknown error"
+        val message = if (errMsg.contains("Software caused connection abort", true) || errMsg.contains("Socket closed", true)) {
+             "Network slept/dropped by OS. Reconnecting..."
+        } else {
+             "Connection Failed: $errMsg"
+        }
         listener.onStateChange(false, message)
         this.webSocket = null // Clear webSocket reference
     }
