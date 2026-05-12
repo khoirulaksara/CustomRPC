@@ -14,3 +14,9 @@
 .cxx
 local.properties
 *.apk
+compile_log.txt
+/app/release
+/app/release
+app/release/baselineProfiles/0/app-release.dm
+app/release/output-metadata.json
+/.idea

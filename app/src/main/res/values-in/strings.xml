@@ -1,18 +1,19 @@
 <resources>
     <string name="app_name">Custom RPC</string>
-    <string name="app_subtitle">Klien Discord Rich Presence</string>
+    <string name="app_subtitle">Client Discord Rich Presence</string>
     
     <!-- Login View -->
     <string name="title_login">CustomRPC</string>
     <string name="hint_token">Token Pengguna</string>
-    <string name="btn_login_discord">Masuk via Discord</string>
+    <string name="btn_login_discord">Login via Discord web (Otomatis)</string>
     <string name="btn_login">Masuk</string>
-    <string name="btn_token_guide">Cara Mendapatkan Token?</string>
-    <string name="msg_enter_token">Mohon masukkan token</string>
-    <string name="msg_token_saved">Token Diterima &amp; Disimpan!</string>
-    <string name="msg_sniffing">Mengambil header \'Authorization\'...</string>
+    <string name="btn_token_guide">Cara mendapatkan Token?</string>
+    <string name="msg_enter_token">Silakan masukkan token</string>
+    <string name="msg_token_saved">Token Berhasil Disimpan!</string>
+    <string name="msg_sniffing">Menangkap header \'Authorization\'...</string>
     
     <!-- Dashboard View -->
+    <string name="title_dashboard">Dashboard</string>
     <string name="status_label">STATUS</string>
     <string name="status_offline">OFFLINE</string>
     <string name="status_connecting">MENGHUBUNGKAN</string>
@@ -22,26 +23,36 @@
     <string name="btn_stop">BERHENTI</string>
     <string name="btn_kill_service">Matikan Layanan</string>
     <string name="btn_configure">Konfigurasi Presence</string>
+    <string name="label_active_preview">Pratinjau Presence Aktif</string>
+    <string name="btn_start_connection">MULAI KONEKSI</string>
+    <string name="btn_stop_connection">BERHENTI KONEKSI</string>
+    <string name="btn_logout">Keluar</string>
+    <string name="desc_battery_opt">Optimasi Baterai Aktif</string>
+    <string name="desc_battery_opt_fix">Klik untuk perbaiki (Disarankan untuk stabilitas 24/7)</string>
+    <string name="msg_disable_opt_manually">Silakan matikan optimasi di pengaturan secara manual</string>
+    <string name="status_no_internet">TIDAK ADA INTERNET</string>
+    <string name="msg_no_internet_warning">Koneksi internet tidak terdeteksi. Presence tidak akan diperbarui.</string>
+    <string name="msg_action_requires_internet">Tindakan ini memerlukan koneksi internet.</string>
     
     <!-- Settings View -->
     <string name="title_configuration">Konfigurasi</string>
     <string name="hint_app_id">ID Aplikasi</string>
-    <string name="hint_app_name">Nama Aktivitas (Nama App Custom)</string>
+    <string name="hint_app_name">Nama Aktivitas (Nama Aplikasi Kustom)</string>
     <string name="label_activity_type">Tipe Aktivitas</string>
     <string name="label_user_status">Status Pengguna</string>
     <string name="hint_details">Detail (Baris Atas)</string>
-    <string name="hint_state">Status (Baris Bawah)</string>
+    <string name="hint_state">State (Baris Bawah)</string>
     <string name="hint_party_size">Ukuran Party</string>
-    <string name="hint_party_max">Maks Party</string>
+    <string name="hint_party_max">Maksimal Party</string>
     
-    <string name="label_timestamps">Waktu</string>
+    <string name="label_timestamps">Timestamp</string>
     <string name="btn_ts_start">Mulai</string>
     <string name="btn_ts_end">Selesai</string>
     <string name="ts_none">Tidak Ada</string>
     
     <string name="label_large_image">Gambar Besar</string>
     <string name="label_small_image">Gambar Kecil</string>
-    <string name="hint_image_key">Kunci (Key)</string>
+    <string name="hint_image_key">Key</string>
     <string name="hint_image_text">Tooltip</string>
     
     <string name="label_btn1">Tombol 1</string>
@@ -51,32 +62,41 @@
     
     <string name="btn_save_apply">Simpan &amp; Terapkan</string>
     <string name="btn_back_dashboard">Kembali ke Dashboard</string>
+    <string name="btn_cancel">Batal</string>
+    <string name="label_recent_app_ids">ID Aplikasi Terkini</string>
+    <string name="label_live_preview">Pratinjau Langsung</string>
+    <string name="msg_app_id_token_missing">ID Aplikasi atau Token hilang</string>
+    <string name="msg_network_error">Kesalahan Jaringan</string>
+    <string name="msg_no_assets">Aset tidak ditemukan</string>
+    <string name="msg_failed_api">Gagal API atau tidak ada aset</string>
+    <string name="title_select_asset">Pilih Aset</string>
     
     <string name="msg_rpc_updated">RPC Diperbarui!</string>
     <string name="msg_fetching_assets">Mengambil aset...</string>
-    <string name="msg_no_app_id">Mohon isi ID Aplikasi terlebih dahulu</string>
-    <string name="msg_no_assets_found">Tidak ditemukan aset untuk App ID ini</string>
-    <string name="title_select_image">Pilih Kunci Gambar</string>
+    <string name="msg_no_app_id">Silakan masukkan ID Aplikasi terlebih dahulu</string>
+    <string name="msg_no_assets_found">Tidak ada aset ditemukan untuk ID ini</string>
+    <string name="title_select_image">Pilih Key Gambar</string>
     
     <!-- About View -->
-    <string name="about_version">Versi 1.0 (Codename: Archangel)</string>
-    <string name="about_dev">Dikembangkan oleh Khoirul Aksara</string>
-    <string name="btn_github">GitHub Repository</string>
-    <string name="btn_email">Kontak / Email</string>
-    <string name="btn_donate">Donasi (Traktir Kopi)</string>
-    <string name="about_desc">Jaga Discord Presence Tetap Hidup.\nSimpel, Ringan, Persisten.</string>
+    <string name="about_version">Versi %s</string>
+    <string name="about_dev">Dikembangkan oleh %s</string>
+    <string name="label_tagline1">Jaga Discord presence Anda tetap hidup.</string>
+    <string name="label_tagline2">Sederhana, ringan, persisten.</string>
+    <string name="btn_visit_repo">Kunjungi Repositori</string>
+    <string name="btn_support_dev">Buy Me Coffee</string>
+    <string name="about_desc">Jaga Discord Presence Anda tetap aktif.\nSederhana, Ringan, Persisten.</string>
     <string name="btn_back">Kembali</string>
     
     <!-- Token Guide Dialog -->
-    <string name="dialog_guide_title">Cara Dapat Token</string>
-    <string name="dialog_guide_msg">1. Buka Discord Web/PC.\n2. Ctrl+Shift+I -> Network.\n3. Ketik \'/api/\' filter.\n4. Kirim chat.\n5. Copy header \'authorization\'.</string>
+    <string name="dialog_guide_title">Cara Mendapatkan Token</string>
+    <string name="dialog_guide_msg">1. Buka Discord di Web/PC.\n2. Tekan Ctrl+Shift+I -> Network.\n3. Ketik \'/api/\' di filter.\n4. Kirim pesan chat.\n5. Salin nilai header \'authorization\'.</string>
     <string name="btn_open_login">Buka Login</string>
     <string name="btn_close">Tutup</string>
     
     <!-- Service / Notifications -->
-    <string name="notif_channel_name">Channel Layanan Discord RPC</string>
-    <string name="notif_title_active">Discord RPC Aktif</string>
-    <string name="notif_desc_background">%s aktif dibelakang layar</string>
+    <string name="notif_channel_name">Saluran Layanan Discord RPC</string>
+    <string name="notif_title_active">Presence Aktif</string>
+    <string name="notif_desc_background">%s berjalan di latar belakang</string>
     <string name="msg_service_started">Layanan RPC Dimulai</string>
-    <string name="msg_service_killed">Layanan mati tidak terduga! Mencoba restart...</string>
+    <string name="msg_service_killed">Layanan terhenti tiba-tiba! Mencoba memulai ulang...</string>
 </resources>
