@@ -58,7 +58,7 @@ fun DashboardScreen(
 
     val statusColor = when {
         isConnected -> DiscordGreen
-        message.contains("Connecting", true) -> DiscordYellow
+        message.contains("Connecting", true) || message.contains("Identifying", true) -> Color(0xFFF47B0E) // Orange
         else -> DiscordRed
     }
 
@@ -145,7 +145,7 @@ fun DashboardScreen(
             contentAlignment = Alignment.Center
         ) {
             val particles = remember {
-                List(60) {
+                List(150) {
                     StatusParticle(
                         angle = Random.nextFloat() * 360f,
                         radiusOffset = (Random.nextFloat() - 0.5f) * 40f,
@@ -156,15 +156,30 @@ fun DashboardScreen(
                 }
             }
 
-            val infiniteTransition = rememberInfiniteTransition()
-            val rotationAngle by infiniteTransition.animateFloat(
-                initialValue = 0f,
-                targetValue = 360f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(3000, easing = LinearEasing),
-                    repeatMode = RepeatMode.Restart
-                )
-            )
+            // Dynamic rotation logic
+            var rotation by remember { mutableStateOf(0f) }
+            val isConnecting = !isConnected && (message.contains("Connecting", true) || message.contains("Identifying", true))
+            val isReady = isConnected
+            
+            val targetSpeed = when {
+                isConnecting -> 2.0f // Kencang
+                isReady -> 0.05f     // Lembut (Sangat Halus)
+                else -> 0.0f         // Berhenti
+            }
+            val currentSpeed by animateFloatAsState(targetSpeed, label = "Speed")
+
+            LaunchedEffect(Unit) {
+                var lastFrameTime = withFrameMillis { it }
+                while (true) {
+                    val nextFrameTime = withFrameMillis { it }
+                    val delta = (nextFrameTime - lastFrameTime) / 1000f
+                    lastFrameTime = nextFrameTime
+                    
+                    if (currentSpeed > 0) {
+                        rotation += delta * 360f * currentSpeed
+                    }
+                }
+            }
 
             Canvas(modifier = Modifier.size(280.dp)) {
                 val cx = size.width / 2f
@@ -179,9 +194,8 @@ fun DashboardScreen(
                 )
                 
                 // 2. Draw Particles
-                val isAnimating = isConnected || message.contains("Connecting", true)
                 particles.forEach { p ->
-                    val currentAngle = (p.angle + (if (isAnimating) rotationAngle else 0f) * p.speed) % 360f
+                    val currentAngle = (p.angle + rotation * p.speed) % 360f
                     val rad = Math.toRadians(currentAngle.toDouble())
                     val r = radius + p.radiusOffset.dp.toPx()
                     val px = cx + (r * cos(rad)).toFloat()

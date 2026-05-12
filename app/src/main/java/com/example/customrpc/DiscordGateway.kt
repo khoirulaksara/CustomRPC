@@ -46,7 +46,7 @@ class DiscordGateway(
         }
         isConnected = true
         Log.i("DiscordGateway", "WebSocket connection opened.")
-        listener.onStateChange(true, "WebSocket Open. Waiting for HELLO...")
+        listener.onStateChange(false, "Connecting... (Socket Open)")
     }
 
     override fun onMessage(webSocket: WebSocket, text: String) {
@@ -70,7 +70,7 @@ class DiscordGateway(
                         startHeartbeat()
                         sendIdentify()
                         Log.i("DiscordGateway", "HELLO received. Identify sent.")
-                        listener.onStateChange(true, "Connected. Identifying...")
+                        listener.onStateChange(false, "Connecting... (Identifying)")
                     } else {
                         Log.e("DiscordGateway", "Connection Failed: Invalid HELLO packet.")
                         listener.onStateChange(false, "Connection Failed: Invalid HELLO packet.")

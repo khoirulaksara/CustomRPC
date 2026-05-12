@@ -83,7 +83,7 @@
     <string name="label_tagline1">Keep your Discord presence alive.</string>
     <string name="label_tagline2">Simple, lightweight, persistent.</string>
     <string name="btn_visit_repo">Visit Repository</string>
-    <string name="btn_support_dev">Support Developer (PayPal)</string>
+    <string name="btn_support_dev">Buy Me Coffee</string>
     <string name="about_desc">Keep your Discord Presence Alive.\nSimple, Lightweight, Persistent.</string>
     <string name="btn_back">Back</string>
     

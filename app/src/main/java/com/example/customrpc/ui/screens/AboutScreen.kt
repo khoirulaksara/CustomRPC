@@ -19,6 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.customrpc.ui.theme.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 
 @Composable
 fun AboutScreen(onBack: () -> Unit) {
@@ -63,6 +65,13 @@ fun AboutScreen(onBack: () -> Unit) {
                     onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://paypal.me/gonzsky"))) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
+                    Icon(
+                        imageVector = Icons.Default.Favorite,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = Color.Red
+                    )
+                    Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.btn_support_dev), color = Color.White)
                 }
             }

@@ -22,13 +22,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import com.example.customrpc.R
+import androidx.compose.ui.res.painterResource
 
 @Composable
 fun AsyncDiscordImage(url: String, modifier: Modifier) {
     var bitmap by remember(url) { mutableStateOf<ImageBitmap?>(null) }
     
     LaunchedEffect(url) {
-        if (url.isBlank()) return@LaunchedEffect
+        if (url.isBlank()) {
+            bitmap = null
+            return@LaunchedEffect
+        }
         withContext(Dispatchers.IO) {
             try {
                 val client = OkHttpClient()
@@ -42,10 +47,13 @@ fun AsyncDiscordImage(url: String, modifier: Modifier) {
                                 bitmap = bmp.asImageBitmap()
                             }
                         }
+                    } else {
+                        bitmap = null
                     }
                 }
             } catch (e: Exception) {
                 android.util.Log.e("AsyncDiscordImage", "Load failed: ${e.message}")
+                bitmap = null
             }
         }
     }
@@ -102,9 +110,12 @@ fun PresencePreview(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Large Image
                 Box(contentAlignment = Alignment.BottomEnd) {
+                    val fallbackUrl = "https://cdn.discordapp.com/app-icons/1450458624806752470/bdd3cad40808a39d3e614fcbfceebf00.png"
+                    
+                    val isLargeNone = largeImageKey.isBlank() || largeImageKey.equals("(none)", ignoreCase = true)
                     val largeUrl = if (largeImageKey.startsWith("http")) largeImageKey 
-                                  else if (largeImageKey.isNotBlank()) "https://cdn.discordapp.com/app-assets/$appId/$largeImageKey.png"
-                                  else ""
+                                  else if (!isLargeNone) "https://cdn.discordapp.com/app-assets/$appId/$largeImageKey.png"
+                                  else fallbackUrl
                     
                     AsyncDiscordImage(
                         url = largeUrl,
@@ -114,7 +125,8 @@ fun PresencePreview(
                             .background(Color.Black.copy(alpha = 0.2f))
                     )
                     
-                    if (smallImageKey.isNotBlank()) {
+                    val isSmallNone = smallImageKey.isBlank() || smallImageKey.equals("(none)", ignoreCase = true)
+                    if (!isSmallNone) {
                         val smallUrl = if (smallImageKey.startsWith("http")) smallImageKey 
                                       else "https://cdn.discordapp.com/app-assets/$appId/$smallImageKey.png"
                         
