@@ -10,12 +10,19 @@ import android.os.Handler
 import android.os.Looper
 import androidx.core.app.NotificationCompat
 import android.util.Log // Import Log
+import android.app.usage.UsageStatsManager
+import android.app.usage.UsageEvents
+import android.content.Context
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 
 class RpcService : Service(), GatewayStateListener {
     private var gateway: DiscordGateway? = null
     private val connectionTimeoutHandler = Handler(Looper.getMainLooper())
     private var connectionTimeoutRunnable: Runnable? = null
     private var reconnectAttempts = 0
+    private val appMonitorHandler = Handler(Looper.getMainLooper())
+    private var lastPackage: String? = null
 
     companion object {
         const val ACTION_START = "ACTION_START"
@@ -38,6 +45,7 @@ class RpcService : Service(), GatewayStateListener {
         val sharedPref = getSharedPreferences("RpcSettings", android.content.Context.MODE_PRIVATE)
         val appName = sharedPref.getString("appName", "Custom RPC") ?: "Custom RPC"
         startPersistentNotification(appName)
+        startAppMonitor()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -186,6 +194,7 @@ class RpcService : Service(), GatewayStateListener {
         // Release Locks
         if (wakeLock?.isHeld == true) wakeLock?.release()
         if (wifiLock?.isHeld == true) wifiLock?.release()
+        stopAppMonitor()
         
         super.onDestroy()
         // Broadcast final disconnected state
@@ -412,6 +421,72 @@ class RpcService : Service(), GatewayStateListener {
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
             }
             getSystemService(NotificationManager::class.java)?.createNotificationChannel(serviceChannel)
+        }
+    }
+
+    private val appMonitorRunnable = object : Runnable {
+        override fun run() {
+            if (gateway != null && lastIsConnected) {
+                checkForegroundApp()
+            }
+            appMonitorHandler.postDelayed(this, 8000L) // Poll every 8s
+        }
+    }
+
+    private fun startAppMonitor() {
+        appMonitorHandler.removeCallbacks(appMonitorRunnable)
+        appMonitorHandler.postDelayed(appMonitorRunnable, 5000L)
+    }
+
+    private fun stopAppMonitor() {
+        appMonitorHandler.removeCallbacks(appMonitorRunnable)
+    }
+
+    private fun checkForegroundApp() {
+        val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val endTime = System.currentTimeMillis()
+        val startTime = endTime - 30000 // Last 30s
+        
+        val usageEvents = usageStatsManager.queryEvents(startTime, endTime)
+        var topPackage: String? = null
+        val event = UsageEvents.Event()
+        while (usageEvents.hasNextEvent()) {
+            usageEvents.getNextEvent(event)
+            if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
+                topPackage = event.packageName
+            }
+        }
+        
+        if (topPackage != null && topPackage != lastPackage && topPackage != packageName) {
+            Log.d("RpcService", "Foreground app changed: $topPackage")
+            lastPackage = topPackage
+            handleAppChange(topPackage)
+        }
+    }
+
+    private fun handleAppChange(pkg: String) {
+        val sharedPref = getSharedPreferences("RpcSettings", Context.MODE_PRIVATE)
+        val overridesJson = sharedPref.getString("app_overrides", "[]") ?: "[]"
+        val overrides: List<AppOverride> = Gson().fromJson(overridesJson, object : TypeToken<List<AppOverride>>() {}.type)
+        
+        val override = overrides.find { it.packageName == pkg }
+        if (override != null) {
+            Log.i("RpcService", "Applying override for ${override.appName}")
+            
+            // Apply Dynamic Variables
+            val dynamicPresence = override.rpcData.copy(
+                name = override.rpcData.name.replace("{app_name}", override.appName).replace("{app_pkg}", pkg),
+                details = override.rpcData.details.replace("{app_name}", override.appName).replace("{app_pkg}", pkg),
+                state = override.rpcData.state.replace("{app_name}", override.appName).replace("{app_pkg}", pkg),
+                largeImageKey = override.rpcData.largeImageKey.replace("{app_pkg}", pkg),
+                smallImageKey = override.rpcData.smallImageKey.replace("{app_pkg}", pkg)
+            )
+            
+            gateway?.updatePresence(dynamicPresence)
+        } else {
+            // Fallback to default
+            Log.d("RpcService", "No override for $pkg, restoring default presence")
+            restoreLastPresence()
         }
     }
 

@@ -171,7 +171,10 @@ fun PresencePreview(
                     if (type != 4) {
                         val timeText = when(timestampMode) {
                             1 -> "00:00 elapsed"
-                            2 -> "00:00 elapsed" // Local time usually starts from 00:00
+                            2 -> {
+                                val sdf = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
+                                "${sdf.format(java.util.Date())}"
+                            }
                             3 -> {
                                 if (startTime != null && endTime != null) {
                                     val diff = endTime - startTime

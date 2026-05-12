@@ -15,6 +15,9 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import com.example.customrpc.R
 import androidx.compose.ui.Alignment
@@ -50,11 +53,27 @@ fun DashboardScreen(
     message: String,
     onNavigateSettings: () -> Unit,
     onNavigateAbout: () -> Unit,
+    onNavigateOverrides: () -> Unit,
     onLogout: () -> Unit
 ) {
     val context = LocalContext.current
     val pm = context.getSystemService(android.os.PowerManager::class.java)
-    val isBatteryOptimized = pm != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !pm.isIgnoringBatteryOptimizations(context.packageName)
+    var isBatteryOptimized by remember { 
+        mutableStateOf(pm != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !pm.isIgnoringBatteryOptimizations(context.packageName)) 
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isBatteryOptimized = pm != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !pm.isIgnoringBatteryOptimizations(context.packageName)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     val statusColor = when {
         isConnected -> DiscordGreen
@@ -283,7 +302,16 @@ fun DashboardScreen(
                     Text(if (isConnected) stringResource(R.string.btn_stop_connection) else stringResource(R.string.btn_start_connection), fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
                 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedButton(
+                    onClick = onNavigateOverrides,
+                    modifier = Modifier.fillMaxWidth().height(50.dp)
+                ) {
+                    Text("App Overrides", color = Color.White)
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
                 
                 OutlinedButton(
                     onClick = {

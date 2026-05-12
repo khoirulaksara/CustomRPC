@@ -58,7 +58,7 @@ import java.util.Date
 
 import com.example.customrpc.ui.screens.*
 
-enum class Screen { Login, Dashboard, Settings, About }
+enum class Screen { Login, Dashboard, Settings, About, AppOverrides }
 
 class MainActivity : ComponentActivity() {
 
@@ -171,7 +171,7 @@ fun MainApp(sharedPref: android.content.SharedPreferences) {
     }
 
     BackHandler(enabled = currentScreen != Screen.Dashboard) {
-        if (currentScreen == Screen.About || currentScreen == Screen.Settings) {
+        if (currentScreen == Screen.About || currentScreen == Screen.Settings || currentScreen == Screen.AppOverrides) {
              currentScreen = Screen.Dashboard
         } else if (currentScreen == Screen.Login) {
              (context as? android.app.Activity)?.finish()
@@ -194,6 +194,7 @@ fun MainApp(sharedPref: android.content.SharedPreferences) {
                 message = connectionMessage,
                 onNavigateSettings = { currentScreen = Screen.Settings },
                 onNavigateAbout = { currentScreen = Screen.About },
+                onNavigateOverrides = { currentScreen = Screen.AppOverrides },
                 onLogout = { currentScreen = Screen.Login }
             )
             Screen.Settings -> SettingsScreen(
@@ -202,6 +203,10 @@ fun MainApp(sharedPref: android.content.SharedPreferences) {
                 isConnected = isConnected
             )
             Screen.About -> AboutScreen(
+                onBack = { currentScreen = Screen.Dashboard }
+            )
+            Screen.AppOverrides -> AppOverridesScreen(
+                sharedPref = sharedPref,
                 onBack = { currentScreen = Screen.Dashboard }
             )
         }
